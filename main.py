@@ -24,15 +24,17 @@ class NN:
         for i in range(depth):
             self.network.append(Layer(widths[i], widths[i+1]))
 
-    def forward_propagate(self, inputs):
+    def forward_propagate(self, inputs: list):
         assert len(inputs) == self.widths[0]
         self.network[0].value = np.array(inputs)
         for i in range(self.depth-1):
             self.network[i+1].value = self.network[i]()
         return self.network[-1]()
 
-    def back_propagate(self, inputs, labels):
+    def back_propagate(self, inputs: list, labels: list):
         raise NotImplementedError
+        assert len(inputs) == self.widths[0]
+        assert len(inputs) == self.widths[-1]
 
 
 myNN = NN(3, [8, 4, 2, 1])
