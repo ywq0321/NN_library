@@ -1,18 +1,17 @@
 import numpy as np
-from random import random
 
 
-class Layer:
-    def __init__(self, width, out, acti='ReLU'):
+class DenseLayer:
+    def __init__(self, width, out, activation='ReLU'):
         self.width = width
         self.out = out
-        self.acti = acti
+        self.activation = activation
         self.value = np.array([None for i in range(width)])
-        self.weights = np.array([[random() * 2 - 1 for i in range(out)] for i in range(width)])
-        self.bias = np.array([random() * 2 - 1 for i in range(out)])
+        self.weights = np.array([[np.random.rand() * 2 - 1 for i in range(out)] for i in range(width)])
+        self.bias = np.array([np.random.rand() * 2 - 1 for i in range(out)])
 
-    def __call__(self, *args, **kwargs):  # get output
-        return self.activation(np.dot(self.value, self.weights) + self.bias, self.acti)
+    def __call__(self):  # get output
+        return self.activation(np.dot(self.value, self.weights) + self.bias, self.activation)
 
     def activation(self, x, func):
         if func == 'ReLU':
@@ -35,42 +34,60 @@ class NN:  # creates a NN with ReLU activation except the last layer, which has 
 
         self.network = []
         for i in range(depth - 1):
-            self.network.append(Layer(widths[i], widths[i + 1]))
-        self.network.append(Layer(widths[depth - 1], widths[depth], acti='sigmoid'))
+            self.network.append(DenseLayer(widths[i], widths[i + 1]))
+        self.network.append(DenseLayer(widths[depth - 1], widths[depth], activation='sigmoid'))
 
     def forward_propagate(self, inputs: list):
         assert len(inputs) == self.widths[0]
+        self.inputs = inputs
         self.network[0].value = np.array(inputs)
         for i in range(self.depth - 1):
             self.network[i + 1].value = self.network[i]()
         return self.network[-1]()
 
     def MSE(self, outputs, labels):
-        assert len(outputs) == len(labels)
         sum = 0
         for i in range(len(outputs)):
             sum += np.abs(outputs[i] ** 2 - labels[i] ** 2)
         return sum / len(outputs)
 
     def MSE_dash(self, outputs, labels):
-        assert len(outputs) == len(labels)
         sum = 0
         for i in range(len(outputs)):
             sum += np.abs(outputs[i] - labels[i])
         return sum * 2 / len(outputs)
 
-    def gradient_descent(self):
-        # we nee∂ to fin∂ ∂E/∂W, ∂E/∂B an∂ ∂E/∂x
-        # ∂E/∂W = X^T * ∂E/∂Y
-        # ∂E/∂B = ∂E/∂Y
-        # ∂E/∂X = ∂E/∂Y * W^T
-        raise NotImplementedError
+    def back_propagate(self, error):
+        learning_rate = 0.01
 
-    def back_propagate(self, inputs: list, labels: list):
-        raise NotImplementedError
+        for i in range(len(self.network) - 1, -1, -1):
+            input_error = np.dot(error, self.network[i].weights)
+            self.network[i].weights -= learning_rate * np.dot(self.network[i].value, error)
+            self.network[i].bias -= learning_rate * error
+            error = input_error
+
+    def train(self, epochs: int, inputs: list, labels: list):
+        assert len(inputs) == len(labels)
         assert len(inputs) == self.widths[0]
-        assert len(inputs) == self.widths[-1]
+        for i in range(epochs):
+            print('Epoch:', i)
+            for j in range(len(inputs)):
+                predicted = self.forward_propagate(inputs[j])
+                error = self.MSE(predicted, labels[i])
+                error_dash = self.MSE_dash(predicted, labels[i])
+                print('Error:', error)
+                self.back_propagate(error_dash)
 
 
-myNN = NN(3, [8, 4, 2, 1])
-print(myNN.forward_propagate([i for i in range(8)])[0])
+def square(x):
+    return x ** 2
+
+
+def generate_data(func, min, max, size):
+    x = np.random.uniform(min, max, size)
+    y = []
+    for i in x:
+        y.append(func(x))
+    return y
+
+
