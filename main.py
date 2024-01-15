@@ -2,7 +2,7 @@ import numpy as np
 
 
 class DenseLayer:
-    def __init__(self, width, out, acti='tanh'):
+    def __init__(self, width, out, acti='ReLU'):
         self.width = width
         self.out = out
         self.acti = acti
@@ -23,6 +23,8 @@ class DenseLayer:
         elif func == 'sigmoid':
             for i in range(len(x)):
                 x[i] = 1 / (1 + np.exp(-x[i]))
+        else:
+            raise Exception
         return x
 
 
@@ -34,7 +36,7 @@ class NN:  # creates a NN with ReLU activation except the last layer, which has 
         self.network = []
         for i in range(self.depth - 1):
             self.network.append(DenseLayer(widths[i], widths[i + 1]))
-        self.network.append(DenseLayer(widths[self.depth - 1], widths[self.depth], acti='sigmoid'))
+        self.network.append(DenseLayer(widths[self.depth - 1], widths[self.depth], acti='ReLU'))
 
     def forward_propagate(self, inputs: list):
         assert len(inputs) == self.widths[0]
@@ -53,7 +55,7 @@ class NN:  # creates a NN with ReLU activation except the last layer, which has 
     def MSE_dash(self, outputs, labels):
         sum = []
         for i in range(len(outputs)):
-            sum.append(2 * np.abs(outputs[i] - labels[i]))
+            sum.append(2 * np.abs(outputs[i] - labels[i]) / len(outputs))
         return sum
 
     def transpose(self, x):
@@ -70,8 +72,13 @@ class NN:  # creates a NN with ReLU activation except the last layer, which has 
 
         for i in range(len(self.network) - 1, -1, -1):
             input_error = np.dot(error, self.transpose(self.network[i].weights))
-            self.network[i].weights -= self.transpose(learning_rate * np.dot(self.network[i].value.reshape(self.widths[i], 1),
-                                                                             error.reshape(1, self.widths[i+1])))
+            a = self.network[i].value.reshape(self.widths[i], 1)
+            b = error.reshape(1, self.widths[i+1])
+            c = np.dot(a, b)
+            d = self.network[i].weights
+            self.network[i].weights -= learning_rate * np.dot(self.network[i].value.reshape(self.widths[i], 1),
+                                                                             error.reshape(1, self.widths[i+1]))
+            d = self.network[i].weights
             self.network[i].bias -= learning_rate * error
             error = input_error
 
@@ -80,20 +87,18 @@ class NN:  # creates a NN with ReLU activation except the last layer, which has 
         assert len(inputs[0]) == self.widths[0]
         for i in range(epochs):
             print('Epoch:', i+1)
-            error = 0
-            error_dash = [0 for i in range(len(labels[0]))]
             for j in range(len(inputs)):
                 predicted = self.forward_propagate(inputs[j])
-                error += self.MSE(predicted, labels[j])
-                err = self.MSE_dash(predicted, labels[j])
-                for i in range(len(err)):
-                    error_dash[i] += err[i]
-            print('Error:', error)
-            self.back_propagate(error_dash)
-            # print(self.forward_propagate([1, 1]))
-            # print(self.forward_propagate([1, 0]))
-            # print(self.forward_propagate([0, 1]))
-            # print(self.forward_propagate([0, 0]))
+                error = self.MSE(predicted, labels[j])
+                error_dash = self.MSE_dash(predicted, labels[j])
+                # print('Pred:', predicted)
+                # print('Label:', labels[j])
+                print('Error:', error)
+                self.back_propagate(error_dash)
+            print(self.forward_propagate([1, 1]))
+            print(self.forward_propagate([1, 0]))
+            print(self.forward_propagate([0, 1]))
+            print(self.forward_propagate([0, 0]))
 
 
 def square(x):
@@ -109,5 +114,5 @@ def generate_data(func, min, max, size):
 
 
 # x, y = generate_data(square, -10, 10, 20)
-my_NN = NN([2, 2, 2])
-my_NN.train(100, [[1, 1], [1, 0], [0, 1], [0, 0]], [[1, 1], [1, 0], [0, 1], [0, 0]])
+my_NN = NN([2, 4, 4, 2])
+my_NN.train(5, [[1, 1], [1, 0], [0, 1], [0, 0]], [[1, 1], [1, 0], [0, 1], [0, 0]])
