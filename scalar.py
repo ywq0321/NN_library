@@ -53,21 +53,25 @@ class Value:
             cur = self
             self.gradient = 1
         if cur.parents == ():
+            print(visited)
             return
 
         # find d(out) / d(self) and d(out) / d(other)
         if cur.parents[2] == 'add':
-            cur.parents[0].gradient = cur.gradient
-            cur.parents[1].gradient = cur.gradient
+            cur.parents[0].gradient += cur.gradient
+            cur.parents[1].gradient += cur.gradient
+            visited.append([cur.parents[0].value, cur.parents[1].value, 'add'])
         elif cur.parents[2] == 'mul':
-            cur.parents[0].gradient = cur.gradient * cur.parents[1].value
-            cur.parents[1].gradient = cur.gradient * cur.parents[0].value
+            cur.parents[0].gradient += cur.gradient * cur.parents[1].value
+            cur.parents[1].gradient += cur.gradient * cur.parents[0].value
+            visited.append([cur.parents[0].value, cur.parents[1].value, 'mul'])
         elif cur.parents[2] == 'pow':
-            cur.parents[0].gradient = (cur.gradient *
+            cur.parents[0].gradient += (cur.gradient *
                                        cur.parents[0].value ** (cur.parents[1].value - 1) * cur.parents[1].value)
-            cur.parents[1].gradient = (cur.gradient *
+            cur.parents[1].gradient += (cur.gradient *
                                        cur.parents[1].value ** (cur.parents[0].value - 1) * cur.parents[0].value)
-        visited.append(cur)
+            visited.append([cur.parents[0].value, cur.parents[1].value, 'pow'])
+
         self.backward(cur=cur.parents[0], visited=visited)
         self.backward(cur=cur.parents[1], visited=visited)
         return
@@ -76,10 +80,19 @@ class Value:
 a = Value(-4.0)
 b = Value(2.0)
 c = a + b
-d = b**3
-e = a*b
-f = e+d
-f.backward()
+# d = a * b + b**3
+c = 1 + c + c
+c = 1 + c + c + (-a)
+# d += d * 2 + (b + a).relu()
+# d += 3 * d + (b - a).relu()
+# e = c - d
+# f = e**2
+# g = f / 2.0
+# g += 10.0 / f
+c.backward()
 print(a.gradient)
 print(b.gradient)
+print(c.gradient)
+print(d.gradient)
 print(e.gradient)
+print(f.gradient)
