@@ -53,37 +53,43 @@ class Value:
     def relu(self):
         return self.value if self.value > 0 else 0
 
-    def backward(self, cur=None, next_visit=None):
-        if next_visit is None:
-            next_visit = []
-        if cur is None:
-            cur = self
-            self.gradient = 1
-        if cur.parents == ():
-            next_visit.pop(0)
-            return
+    def backward(self):
+        next_visit = [self]
+        cur = self
+        self.gradient = 1
+        history = []
 
         # find d(out) / d(self) and d(out) / d(other)
-        if cur.parents[2] == 'add':
-            cur.parents[0].gradient += cur.gradient
-            cur.parents[1].gradient += cur.gradient
-        elif cur.parents[2] == 'mul':
-            cur.parents[0].gradient += cur.gradient * cur.parents[1].value
-            cur.parents[1].gradient += cur.gradient * cur.parents[0].value
-        elif cur.parents[2] == 'pow':
-            cur.parents[0].gradient += (cur.gradient *
-                                        cur.parents[0].value ** (cur.parents[1].value - 1) * cur.parents[1].value)
-            cur.parents[1].gradient += (cur.gradient *
-                                        np.log(cur.parents[0].value) * cur.parents[0].value ** cur.parents[1].value)
+        while 1:
+            if len(next_visit) == 0:
+                break
+            cur = next_visit.pop(0)
+            if cur.idx in history:
+                continue
+            history.append(cur.idx)
+            print(history)
+            if cur.parents == ():
+                continue
 
-        next_visit.append(cur.parents[0])
-        next_visit.append(cur.parents[1])
-        next_visit.pop(0)
-        print(next_visit)
-        if len(next_visit) == 0:
-            return
-        else:
-            self.backward(cur=next_visit[0], next_visit=next_visit)
+
+            if cur.parents[2] == 'add':
+                cur.parents[0].gradient += cur.gradient
+                cur.parents[1].gradient += cur.gradient
+            elif cur.parents[2] == 'mul':
+                cur.parents[0].gradient += cur.gradient * cur.parents[1].value
+                cur.parents[1].gradient += cur.gradient * cur.parents[0].value
+            elif cur.parents[2] == 'pow':
+                cur.parents[0].gradient += (cur.gradient *
+                                            cur.parents[0].value ** (cur.parents[1].value - 1) * cur.parents[1].value)
+                cur.parents[1].gradient += (cur.gradient *
+                                            np.log(cur.parents[0].value) * cur.parents[0].value ** cur.parents[1].value)
+
+            if cur.parents[0].idx > cur.parents[1].idx:
+                next_visit.append(cur.parents[0])
+                next_visit.append(cur.parents[1])
+            else:
+                next_visit.append(cur.parents[1])
+                next_visit.append(cur.parents[0])
 
     def graph(self):
         G = nx.DiGraph()
@@ -104,19 +110,20 @@ class Value:
 a = Value(-4.0)
 b = Value(2.0)
 c = a + b
-d = a * b + b**3
+# d = a * b + b**3
 c += c + 1
-c += 1 + c + (-a)
-d += d * 2 + (b + a)
-d += 3 * d + (b - a)
-e = c - d
-f = e**2
-g = f / 2.0
-g += 10.0 / f
-g.backward()
+# c += 1 + c + (-a)
+# d += d * 2 + (b + a)
+# d += 3 * d + (b - a)
+# e = c - d
+# f = e**2
+# g = f / 2.0
+# g += 10.0 / f
+c.backward()
 print(a.gradient)
 print(b.gradient)
 print(c.gradient)
+c.graph()
 print(d.gradient)
 print(e.gradient)
 print(f.gradient)
