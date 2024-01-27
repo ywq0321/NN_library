@@ -1,14 +1,21 @@
 import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+
+idx = 0
 
 
 class Value:
-    def __init__(self, value, parents=()):
+    def __init__(self, value, parents=(), label=0):
         if type(value) == int or type(value) == float:
             self.value = value
         else:
             raise ValueError('int or float expected, but ' + str(type(value)) + ' is given. ')
         self.parents = parents
         self.gradient = 0
+        global idx
+        self.idx = idx
+        idx += 1
 
     def __add__(self, other):
         other = other if type(other) == Value else Value(other)
@@ -46,50 +53,67 @@ class Value:
     def relu(self):
         return self.value if self.value > 0 else 0
 
-    def backward(self, cur=None, visited=None):
-        if visited is None:
-            visited = []
+    def backward(self, cur=None, next_visit=None):
+        if next_visit is None:
+            next_visit = []
         if cur is None:
             cur = self
             self.gradient = 1
         if cur.parents == ():
-            print(visited)
+            next_visit.pop(0)
             return
 
         # find d(out) / d(self) and d(out) / d(other)
         if cur.parents[2] == 'add':
             cur.parents[0].gradient += cur.gradient
             cur.parents[1].gradient += cur.gradient
-            visited.append([cur.parents[0].value, cur.parents[1].value, 'add'])
         elif cur.parents[2] == 'mul':
             cur.parents[0].gradient += cur.gradient * cur.parents[1].value
             cur.parents[1].gradient += cur.gradient * cur.parents[0].value
-            visited.append([cur.parents[0].value, cur.parents[1].value, 'mul'])
         elif cur.parents[2] == 'pow':
             cur.parents[0].gradient += (cur.gradient *
-                                       cur.parents[0].value ** (cur.parents[1].value - 1) * cur.parents[1].value)
+                                        cur.parents[0].value ** (cur.parents[1].value - 1) * cur.parents[1].value)
             cur.parents[1].gradient += (cur.gradient *
-                                       cur.parents[1].value ** (cur.parents[0].value - 1) * cur.parents[0].value)
-            visited.append([cur.parents[0].value, cur.parents[1].value, 'pow'])
+                                        np.log(cur.parents[0].value) * cur.parents[0].value ** cur.parents[1].value)
 
-        self.backward(cur=cur.parents[0], visited=visited)
-        self.backward(cur=cur.parents[1], visited=visited)
-        return
+        next_visit.append(cur.parents[0])
+        next_visit.append(cur.parents[1])
+        next_visit.pop(0)
+        print(next_visit)
+        if len(next_visit) == 0:
+            return
+        else:
+            self.backward(cur=next_visit[0], next_visit=next_visit)
+
+    def graph(self):
+        G = nx.DiGraph()
+        self.generate_graph(self, G)
+        print('Max idx is: '+str(idx-1))
+        nx.draw_networkx(G, arrows=True)
+        plt.show()
+
+    def generate_graph(self, cur, G):
+        if cur.parents == ():
+            return
+        G.add_edge(cur.idx, cur.parents[0].idx, color='blue')
+        G.add_edge(cur.idx, cur.parents[1].idx, color='red')
+        self.generate_graph(cur.parents[0], G)
+        self.generate_graph(cur.parents[1], G)
 
 
 a = Value(-4.0)
 b = Value(2.0)
 c = a + b
-# d = a * b + b**3
-c = 1 + c + c
-c = 1 + c + c + (-a)
-# d += d * 2 + (b + a).relu()
-# d += 3 * d + (b - a).relu()
-# e = c - d
-# f = e**2
-# g = f / 2.0
-# g += 10.0 / f
-c.backward()
+d = a * b + b**3
+c += c + 1
+c += 1 + c + (-a)
+d += d * 2 + (b + a)
+d += 3 * d + (b - a)
+e = c - d
+f = e**2
+g = f / 2.0
+g += 10.0 / f
+g.backward()
 print(a.gradient)
 print(b.gradient)
 print(c.gradient)
