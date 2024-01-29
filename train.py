@@ -34,6 +34,9 @@ for i in range(epochs):
     g = f / 2.0
     g = 10.0 / f + g
 
+    print(g.value)
+    print(A, B)
+    print()
     preds.append(g.value)
     losses.append(MSE(g.value, true))
 
