@@ -54,23 +54,14 @@ class Value:
         return self.value if self.value > 0 else 0
 
     def backward(self):
-        next_visit = [self]
-        cur = self
         self.gradient = 1
-        history = []
+
+        next_visit = list(reversed(self.topological_order(self)))
 
         # find d(out) / d(self) and d(out) / d(other)
-        while 1:
-            if len(next_visit) == 0:
-                break
-            cur = next_visit.pop(0)
-            if cur.idx in history:
-                continue
-            history.append(cur.idx)
-            print(history)
+        for cur in next_visit:
             if cur.parents == ():
                 continue
-
 
             if cur.parents[2] == 'add':
                 cur.parents[0].gradient += cur.gradient
@@ -84,17 +75,19 @@ class Value:
                 cur.parents[1].gradient += (cur.gradient *
                                             np.log(cur.parents[0].value) * cur.parents[0].value ** cur.parents[1].value)
 
-            if cur.parents[0].idx > cur.parents[1].idx:
-                next_visit.append(cur.parents[0])
-                next_visit.append(cur.parents[1])
-            else:
-                next_visit.append(cur.parents[1])
-                next_visit.append(cur.parents[0])
+    def topological_order(self, cur, visited=[], out=[]):
+        if cur not in visited:
+            visited.append(cur)
+            if len(cur.parents) != 0:
+                self.topological_order(cur.parents[0])
+                self.topological_order(cur.parents[1])
+            out.append(cur)
+        return out
 
     def graph(self):
         G = nx.DiGraph()
         self.generate_graph(self, G)
-        print('Max idx is: '+str(idx-1))
+        print('Max idx is: ' + str(idx - 1))
         nx.draw_networkx(G, arrows=True)
         plt.show()
 
@@ -110,20 +103,18 @@ class Value:
 a = Value(-4.0)
 b = Value(2.0)
 c = a + b
-# d = a * b + b**3
+d = a * b + b**3
 c += c + 1
-# c += 1 + c + (-a)
-# d += d * 2 + (b + a)
-# d += 3 * d + (b - a)
-# e = c - d
-# f = e**2
-# g = f / 2.0
-# g += 10.0 / f
-c.backward()
+c += 1 + c + (-a)
+d += d * 2 + (b + a)
+d += 3 * d + (b - a)
+print(c.value)
+print('---------')
+d.backward()
 print(a.gradient)
 print(b.gradient)
-print(c.gradient)
+# print(c.gradient)
 c.graph()
-print(d.gradient)
-print(e.gradient)
-print(f.gradient)
+# print(d.gradient)
+# print(e.gradient)
+# print(f.gradient)
