@@ -51,7 +51,7 @@ class Value:
         return other * self ** -1
 
     def relu(self):
-        return self.value if self.value > 0 else 0
+        return Value(self.value if self.value > 0 else 0, (self, None, 'relu'))
 
     def backward(self):
         self.gradient = 1
@@ -73,14 +73,17 @@ class Value:
                 cur.parents[0].gradient += (cur.gradient *
                                             cur.parents[0].value ** (cur.parents[1].value - 1) * cur.parents[1].value)
                 cur.parents[1].gradient += (cur.gradient *
-                                            np.log(cur.parents[0].value) * cur.parents[0].value ** cur.parents[1].value)
+                                            np.log(np.abs(cur.parents[0].value)) * cur.parents[0].value ** cur.parents[1].value)
+            elif cur.parents[2] == 'relu':
+                cur.parents[0].gradient += cur.gradient if cur.value > 0 else 0
 
     def topological_order(self, cur, visited=[], out=[]):
         if cur not in visited:
             visited.append(cur)
             if len(cur.parents) != 0:
                 self.topological_order(cur.parents[0])
-                self.topological_order(cur.parents[1])
+                if cur.parents[1] is not None:
+                    self.topological_order(cur.parents[1])
             out.append(cur)
         return out
 
@@ -100,21 +103,23 @@ class Value:
         self.generate_graph(cur.parents[1], G)
 
 
-a = Value(-4.0)
-b = Value(2.0)
-c = a + b
-d = a * b + b**3
-c += c + 1
-c += 1 + c + (-a)
-d += d * 2 + (b + a)
-d += 3 * d + (b - a)
-print(c.value)
-print('---------')
-d.backward()
-print(a.gradient)
-print(b.gradient)
+# a = Value(-4.0)
+# b = Value(2.0)
+# c = a + b
+# d = a * b + b**3
+# c += c + 1
+# c += 1 + c + (-a)
+# d += d * 2 + (b + a).relu()
+# d += 3 * d + (b - a).relu()
+# e = c - d
+# f = e**2
+# g = f / 2.0
+# g += 10.0 / f
+# g.backward()
+# print(a.gradient)
+# print(b.gradient)
 # print(c.gradient)
-c.graph()
+# c.graph()
 # print(d.gradient)
 # print(e.gradient)
 # print(f.gradient)
