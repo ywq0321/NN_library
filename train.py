@@ -9,7 +9,7 @@ B = 2
 true = 5
 
 epochs = 50
-learning_rate = 0.000002
+learning_rate = 0.000005
 preds = []
 losses = []
 
